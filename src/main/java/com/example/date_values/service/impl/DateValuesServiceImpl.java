@@ -1,6 +1,7 @@
 package com.example.date_values.service.impl;
 
 import com.example.date_values.entity.DateValues;
+import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.reponse.SpecialCycleStatisticsRes;
 import com.example.date_values.model.request.SearchReq;
@@ -8,11 +9,17 @@ import com.example.date_values.model.request.SpecialCycleStatisticsReq;
 import com.example.date_values.model.request.TodayNumberStatisticsReq;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateValuesRepository;
+import com.example.date_values.service.DateValuesHistoryService;
 import com.example.date_values.service.DateValuesService;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import util.DateUtil;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -22,6 +29,9 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
 
     @Autowired
     private DateValuesRepository repository;
+
+    @Autowired
+    private DateValuesHistoryService historyService;
 
     @Override
     protected BaseRepository<DateValues> getRepository() {
@@ -92,7 +102,7 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
     }
 
     @Override
-    public BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req) {
+    public BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req) throws Exception {
 //        if (req.getOperatorType() != 2 && req.getOperatorType() != 1){
 //            return new BaseResponse().fail("OperatorType chỉ là 1 hoặc 2");
 //        }
@@ -156,15 +166,62 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
             List<Integer> uniqueRandomNumbers = generateUniqueRandomNumbers(req.getQuantity() - 1, checkList);
             uniqueRandomNumbers.add(merge);
             SpecialCycleStatisticsRes result = find(SpecialCycleStatisticsReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).data(uniqueRandomNumbers).build());
-            System.out.println(result.getMaxGap() + "-" + result.getStubbornnessLevel());
-            System.out.println(uniqueRandomNumbers);
             if (result.getMaxGap() - result.getStubbornnessLevel() < 5){
+                DateValuesHistory dateValuesHistory = DateValuesHistory.builder()
+                        .startDate(result.getStartDate())
+                        .endDate(result.getEndDate())
+                        .maxStartDate(result.getMaxStartDate())
+                        .maxEndDate(result.getMaxEndDate())
+                        .lastDate(result.getLastDate())
+                        .maxGap(result.getMaxGap())
+                        .stubbornnessLevel(result.getStubbornnessLevel())
+                        .data(result.getData().toString())
+                        .date(DateUtil.getCurrenDate())
+                        .build();
+                historyService.create(dateValuesHistory);
                 return new BaseResponse().success(result);
             }
 
         }
 
         return new BaseResponse().fail("Vui lòng thử lại lần nữa");
+    }
+
+    @Override
+    public BaseResponse crawlData(Long date) {
+        String dateString = DateUtil.dateLongToString(date);
+        if (repository.existsByDate(date)) {
+            return new BaseResponse().fail(String.format("Kết quả ngày %s đã tồn tại", dateString));
+        }else{
+            try {
+                // Kết nối đến trang web
+                String url = String.format("https://xoso.com.vn/xsmb-%s.html", dateString); // Đổi thành URL của trang web bạn muốn crawl
+                Document doc = Jsoup.connect(url).timeout(5000).userAgent("Mozilla").get();
+
+                Element valueElement = doc.selectFirst("span#mb_prizeDB_item0");
+                if (valueElement != null) {
+                    String value = valueElement.text().substring(valueElement.text().length() - 2); // Lấy nội dung text bên trong thẻ div
+                    DateValues dateValues = DateValues.builder()
+                            .date(date)
+                            .value(value)
+                            .build();
+                    return new BaseResponse().success(this.create(dateValues));
+                } else {
+                    return new BaseResponse().fail("Lấy dữ liệu thất bại");
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return new BaseResponse().fail("Fail!");
+        }
+
+    }
+
+    @Scheduled(cron = "0 00 19 * * ?")
+    public BaseResponse ScheduledCrawl(){
+        System.out.println("a");
+        return this.crawlData(DateUtil.getCurrenDate());
     }
 
     public static List<Integer> generateUniqueRandomNumbers(int n, List<Integer> existingList) {

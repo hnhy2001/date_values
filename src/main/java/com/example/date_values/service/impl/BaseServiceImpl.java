@@ -70,8 +70,8 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
 
     @Override
     public T getById(Long id) throws Exception {
-        return this.getRepository().findById(id).orElseThrow(
-                () -> new Exception(String.format("Dữ liệu có id %s không tồn tại!", id)));
+        T t = this.getRepository().findAllByIdAndIsActive(id,1);
+        return t;
     }
 
     @Override

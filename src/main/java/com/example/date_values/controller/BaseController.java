@@ -33,7 +33,11 @@ public abstract class BaseController<T extends BaseEntity, U> {
 
     @GetMapping("/detail")
     public BaseResponse getById(@RequestParam(value = "id") Long id) throws Exception {
-        return new BaseResponse(200, "Lấy dữ liệu thành công!", MapperUtil.map(this.getService().getById(id), dtoClass));
+        T t = this.getService().getById(id);
+        if (t == null){
+            return new BaseResponse().fail(String.format("Dữ liệu có id %s không tồn tại!", id));
+        }
+        return new BaseResponse(200, "Lấy dữ liệu thành công!", MapperUtil.map(t, dtoClass));
     }
 
     @GetMapping("/get-all")

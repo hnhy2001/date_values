@@ -98,6 +98,14 @@
 <!--            <artifactId>spring-security-test</artifactId>-->
 <!--            <scope>test</scope>-->
 <!--        </dependency>-->
+
+<!--    crawl data-->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.15.4</version> <!-- Sử dụng phiên bản chính xác -->
+        </dependency>
+
     </dependencies>
 
     <build>

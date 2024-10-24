@@ -38,7 +38,7 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     }
 
     @PostMapping("statistic-today-number")
-    public BaseResponse getTodayNumbersStatistics(@RequestBody TodayNumberStatisticsReq req){
+    public BaseResponse getTodayNumbersStatistics(@RequestBody TodayNumberStatisticsReq req) throws Exception {
         return dateValuesService.getTodayNumbersStatistics(req);
     }
 
@@ -57,5 +57,10 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
             }
         }
         return req.getData();
+    }
+
+    @GetMapping("crawl-data")
+    public BaseResponse crawlData(@RequestParam Long date){
+        return dateValuesService.crawlData(date);
     }
 }

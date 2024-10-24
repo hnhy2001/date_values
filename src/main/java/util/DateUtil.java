@@ -85,4 +85,34 @@ public class DateUtil {
         long diffInMillies = Math.abs(dateObj2.getTime() - dateObj1.getTime());
         return TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
     }
+
+    public static String dateLongToString(Long date){
+        // Chuyển Long thành chuỗi
+        String dateString = date.toString();
+
+        // Lấy từng phần ngày, tháng, năm từ chuỗi
+        String day = dateString.substring(6, 8);
+        String month = dateString.substring(4, 6);
+        String year = dateString.substring(0, 4);
+
+        // Kết hợp lại thành định dạng mong muốn
+        String result = day + "-" + month + "-" + year;
+        return result;
+    }
+
+    public static Long StringToDateLong(String date){
+
+        // Tách ngày, tháng, năm từ chuỗi
+        String[] dateParts = date.split("-");
+        String day = dateParts[0];
+        String month = dateParts[1];
+        String year = dateParts[2];
+
+        // Ghép lại thành chuỗi định dạng yyyyMMdd
+        String longDateString = year + month + day;
+
+        // Chuyển đổi thành Long
+        Long result = Long.parseLong(longDateString);
+        return result;
+    }
 }

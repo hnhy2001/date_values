@@ -9,5 +9,6 @@ import com.example.date_values.model.request.TodayNumberStatisticsReq;
 
 public interface DateValuesService extends BaseService<DateValues> {
     BaseResponse getSpecialCycleStatistics(SpecialCycleStatisticsReq req);
-    BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req);
+    BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req) throws Exception;
+    BaseResponse crawlData(Long date);
 }
