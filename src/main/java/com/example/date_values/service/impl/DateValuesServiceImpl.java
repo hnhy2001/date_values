@@ -16,6 +16,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.relational.core.sql.In;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -55,12 +56,15 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .sort("id,asc")
                 .build();
         List<DateValues> dateValuesList = this.search(searchReq).getContent();
+        Map<Long, Integer> dateValuesMap = new HashMap<>();
         int countGap = 1;
         int maxGap = 0;
-        Long lastDate = 0L;
         Long maxEndDate = 0L;
-
+        int duringValue = 0;
+        Long duringDate = 0L;
+        int check = 0;
         for (DateValues element : dateValuesList) {
+            dateValuesMap.put(element.getDate(), Integer.parseInt(element.getValue()));
             if (!req.getData().contains(Integer.parseInt(element.getValue()))) {
                 countGap++;
                 if (countGap > maxGap) {
@@ -69,10 +73,13 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 }
             } else {
                 countGap = 1;
-                lastDate = element.getDate();
+                duringDate = element.getDate();
+                duringValue = Integer.parseInt(element.getValue());
+                check = 1;
             }
         }
-        maxEndDate = DateUtil.sum(maxEndDate, 1);
+        maxEndDate = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxEndDate : DateUtil.sum(maxEndDate, 1);
+        maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
         Long maxStartDate = DateUtil.subtract(maxEndDate, maxGap);
 
         searchReq = SearchReq.builder()
@@ -85,17 +92,32 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .build();
 
         DateValues dateValues = this.search(searchReq).getContent().get(0);
-
-        SpecialCycleStatisticsRes res = SpecialCycleStatisticsRes.builder()
-                .startDate(req.getStartDate())
-                .endDate(req.getEndDate())
-                .data(req.getData())
-                .maxStartDate(maxStartDate)
-                .maxEndDate(maxEndDate)
-                .lastDate(lastDate)
-                .maxGap(maxGap)
-                .stubbornnessLevel(DateUtil.calculateDaysBetween(dateValues.getDate(), DateUtil.getCurrenDate()) - 1)
-                .build();
+        SpecialCycleStatisticsRes res;
+        if (check == 1 ){
+            res = SpecialCycleStatisticsRes.builder()
+                    .startDate(req.getStartDate())
+                    .endDate(req.getEndDate())
+                    .data(req.getData())
+                    .maxStartDate(maxStartDate)
+                    .maxEndDate(req.getData().contains(dateValuesMap.get(maxEndDate)) ? maxEndDate : 0)
+                    .lastDate(dateValues.getDate())
+                    .maxGap(maxGap)
+                    .lastValue(Integer.parseInt(dateValues.getValue()))
+                    .maxEndValue(req.getData().contains(dateValuesMap.get(maxEndDate)) ? dateValuesMap.get(maxEndDate) : 0)
+                    .maxStartValue(dateValuesMap.get(maxStartDate))
+                    .stubbornnessLevel(DateUtil.calculateDaysBetween(dateValues.getDate(), DateUtil.getCurrenDate()) - 1)
+                    .duringDate(duringDate)
+                    .duringValue(duringValue)
+                    .check(check)
+                    .build();
+        }else {
+            res = SpecialCycleStatisticsRes.builder()
+                    .stubbornnessLevel(DateUtil.calculateDaysBetween(dateValues.getDate(), DateUtil.getCurrenDate()) - 1)
+                    .lastDate(dateValues.getDate())
+                    .lastValue(Integer.parseInt(dateValues.getValue()))
+                    .check(check)
+                    .build();
+        }
         return res;
     }
 
@@ -134,13 +156,13 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 check = 25;
                 break;
             case 45:
-                check = 20;
+                check = 23;
                 break;
             case 50:
-                check = 15;
+                check = 22;
                 break;
             case 55:
-                check = 10;
+                check = 21;
                 break;
         }
 

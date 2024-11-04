@@ -18,6 +18,12 @@ public class SpecialCycleStatisticsRes {
     private Long maxStartDate;
     private Long maxEndDate;
     private Long lastDate;
+    private int maxStartValue;
+    private int maxEndValue;
+    private int lastValue;
     private int maxGap;
+    private int duringValue;
+    private Long duringDate;
     private long stubbornnessLevel;
+    private int check;
 }
