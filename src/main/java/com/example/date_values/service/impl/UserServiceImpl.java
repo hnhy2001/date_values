@@ -82,6 +82,7 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
             user.setCreateDate(DateUtil.getCurrenDateTime());
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setRole("user");
+            user.setStatus(1);
             result = super.create(user);
             return new BaseResponse().success(MapperUtil.map(result, UserDto.class));
         }catch (Exception e){
@@ -122,7 +123,7 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
         if (user == null){
             return new BaseResponse().fail("Tài khoản không tồn tại Hoặc đã bị khóa!");
         }
-        user.setIsActive(-1);
+        user.setStatus(-1);
         userRepository.save(user);
         return new BaseResponse().success("Khóa tài khoản thành công!");
     }
@@ -130,10 +131,10 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
     @Override
     public BaseResponse unlockUser(Long id) throws Exception {
         User user = userRepository.findAllById(id);
-        if (user == null){
+        if (user == null || user.getIsActive() == 1){
             return new BaseResponse().fail("Tài khoản không tồn tại!");
         }
-        user.setIsActive(1);
+        user.setStatus(1);
         userRepository.save(user);
         return new BaseResponse().success("Mở Khóa tài khoản thành công!");
     }
@@ -149,14 +150,5 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
 
     private boolean isValidPassword(String userPass, String reqPass) {
         return !StringUtils.isEmpty(reqPass) && passwordEncoder.matches(reqPass, userPass);
-    }
-
-    @Override
-    public Page<User> search(SearchReq req) {
-//        req.setFilter(req.getFilter().concat(DELETED_FILTER));
-        Node rootNode = new RSQLParser().parse(req.getFilter());
-        Specification<User> spec = rootNode.accept(new CustomRsqlVisitor<User>());
-        Pageable pageable = super.getPage(req);
-        return this.getRepository().findAll(spec, pageable);
     }
 }

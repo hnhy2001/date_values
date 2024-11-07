@@ -35,4 +35,7 @@ public class User extends BaseEntity{
 
     @Column()
     private String address;
+
+    @Column()
+    private int status;
 }
