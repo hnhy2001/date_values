@@ -6,15 +6,23 @@ import com.example.date_values.entity.User;
 import com.example.date_values.model.cons.STATUS;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.reponse.LoginRes;
+import com.example.date_values.model.request.ChangePasswordReq;
 import com.example.date_values.model.request.ChangeRoleReq;
 import com.example.date_values.model.request.LoginReq;
+import com.example.date_values.model.request.SearchReq;
+import com.example.date_values.query.CustomRsqlVisitor;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.UserRepository;
 import com.example.date_values.service.UserService;
 import com.example.date_values.util.DateUtil;
 import com.example.date_values.util.MapperUtil;
+import cz.jirutka.rsql.parser.RSQLParser;
+import cz.jirutka.rsql.parser.ast.Node;
 import org.apache.catalina.mapper.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -95,15 +103,60 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
     }
 
     @Override
+    public BaseResponse changePassword(ChangePasswordReq req) throws Exception {
+        User user = this.getById(req.getUserId());
+        if (user == null){
+            return new BaseResponse().fail("Tài khoản không tồn tại!");
+        }
+        if (!passwordEncoder.matches(req.getOldPassword(), user.getPassword())){
+            return new BaseResponse().fail("Mật khẩu cũ không khớp!");
+        }
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+        return new BaseResponse().success("Thay đổi mật khẩu thành công!");
+    }
+
+    @Override
+    public BaseResponse lockUser(Long id) throws Exception {
+        User user = this.getById(id);
+        if (user == null){
+            return new BaseResponse().fail("Tài khoản không tồn tại Hoặc đã bị khóa!");
+        }
+        user.setIsActive(-1);
+        userRepository.save(user);
+        return new BaseResponse().success("Khóa tài khoản thành công!");
+    }
+
+    @Override
+    public BaseResponse unlockUser(Long id) throws Exception {
+        User user = userRepository.findAllById(id);
+        if (user == null){
+            return new BaseResponse().fail("Tài khoản không tồn tại!");
+        }
+        user.setIsActive(1);
+        userRepository.save(user);
+        return new BaseResponse().success("Mở Khóa tài khoản thành công!");
+    }
+
+    @Override
     public User update(User t) throws Exception {
         User entityMy = this.getRepository().findAllById(t.getId());
         MapperUtil.mapValue(t, entityMy);
         t.setUpdateDate(DateUtil.getCurrenDateTime());
-        entityMy.setPassword(passwordEncoder.encode(t.getPassword()));
+//        entityMy.setPassword(passwordEncoder.encode(t.getPassword()));
         return getRepository().save(entityMy);
     }
 
     private boolean isValidPassword(String userPass, String reqPass) {
         return !StringUtils.isEmpty(reqPass) && passwordEncoder.matches(reqPass, userPass);
+    }
+
+    @Override
+    public Page<User> search(SearchReq req) {
+//        req.setFilter(req.getFilter().concat(DELETED_FILTER));
+        Node rootNode = new RSQLParser().parse(req.getFilter());
+        Specification<User> spec = rootNode.accept(new CustomRsqlVisitor<User>());
+        Pageable pageable = super.getPage(req);
+        return this.getRepository().findAll(spec, pageable);
     }
 }

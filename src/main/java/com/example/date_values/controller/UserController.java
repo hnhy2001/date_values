@@ -3,6 +3,7 @@ package com.example.date_values.controller;
 import com.example.date_values.dto.UserDto;
 import com.example.date_values.entity.User;
 import com.example.date_values.model.reponse.BaseResponse;
+import com.example.date_values.model.request.ChangePasswordReq;
 import com.example.date_values.model.request.ChangeRoleReq;
 import com.example.date_values.model.request.LoginReq;
 import com.example.date_values.service.BaseService;
@@ -42,5 +43,20 @@ public class UserController extends BaseController<User, UserDto>{
     @PostMapping("/change-role")
     public BaseResponse changeRole(@RequestBody ChangeRoleReq req) throws Exception {
         return userService.changeRole(req);
+    }
+
+    @PostMapping("/change-password")
+    public BaseResponse changePassword(@RequestBody ChangePasswordReq req) throws Exception {
+        return userService.changePassword(req);
+    }
+
+    @GetMapping("/lock")
+    public BaseResponse lock(@RequestParam Long id) throws Exception {
+        return userService.lockUser(id);
+    }
+
+    @GetMapping("/unlock")
+    public BaseResponse unlock(@RequestParam Long id) throws Exception {
+        return userService.unlockUser(id);
     }
 }
