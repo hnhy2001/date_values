@@ -54,6 +54,9 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
 
         User user = userOptional.get();
         if (!Objects.equals(user.getIsActive(), 1))
+            return new BaseResponse(500, "Account đã bị xóa", null);
+
+        if (!Objects.equals(user.getStatus(), 1))
             return new BaseResponse(500, "Account đã bị khóa", null);
 
         if (!isValidPassword(user.getPassword(), req.getPassword())) {
