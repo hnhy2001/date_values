@@ -32,12 +32,12 @@ public class BaseEntity {
     @Column(name = "updated_date")
     private Long updateDate;
 
-//    @Column(name = "created_by")
-//    @CreatedBy
-//    private String createdBy;
-//
-//    @Column(name = "updated_by")
-//    @LastModifiedBy
-//    private String updatedBy;
+    @Column(name = "created_by")
+    @CreatedBy
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    @LastModifiedBy
+    private String updatedBy;
 
 }

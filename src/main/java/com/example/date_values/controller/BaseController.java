@@ -42,7 +42,7 @@ public abstract class BaseController<T extends BaseEntity, U> {
 
     @GetMapping("/get-all")
     public BaseResponse getAll(@RequestParam(value = "id") Long id) throws Exception {
-        return new BaseResponse(200, "Lấy dữ liệu thành công!", MapperUtil.mapEntityListIntoDtoPage(this.getService().getAll(), dtoClass));
+        return new BaseResponse(200, "Lấy dữ liệu thành công!", MapperUtil.mapEntityListIntoDtoPage(this.getService().getByActive(), dtoClass));
     }
 
     @PutMapping("/update")

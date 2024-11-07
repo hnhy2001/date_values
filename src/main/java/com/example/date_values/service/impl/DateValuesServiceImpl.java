@@ -4,6 +4,7 @@ import com.example.date_values.entity.DateValues;
 import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.reponse.SpecialCycleStatisticsRes;
+import com.example.date_values.model.request.CreatePrimeNumbersReq;
 import com.example.date_values.model.request.SearchReq;
 import com.example.date_values.model.request.SpecialCycleStatisticsReq;
 import com.example.date_values.model.request.TodayNumberStatisticsReq;
@@ -197,6 +198,8 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                         .stubbornnessLevel(result.getStubbornnessLevel())
                         .data(result.getData().toString())
                         .date(DateUtil.getCurrenDate())
+                        .status(0)
+                        .quantity(result.getData().size())
                         .build();
                 historyService.create(dateValuesHistory);
                 return new BaseResponse().success(result);
@@ -236,6 +239,26 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
             return new BaseResponse().fail("Fail!");
         }
 
+    }
+
+    @Override
+    public BaseResponse createPrimeNumbers(SpecialCycleStatisticsReq req) throws Exception {
+        SpecialCycleStatisticsRes result = find(req);
+        DateValuesHistory dateValuesHistory = DateValuesHistory.builder()
+                .startDate(result.getStartDate())
+                .endDate(result.getEndDate())
+                .maxStartDate(result.getMaxStartDate())
+                .maxEndDate(result.getMaxEndDate())
+                .lastDate(result.getLastDate())
+                .maxGap(result.getMaxGap())
+                .stubbornnessLevel(result.getStubbornnessLevel())
+                .data(result.getData().toString())
+                .date(DateUtil.getCurrenDate())
+                .status(1)
+                .quantity(result.getData().size())
+                .build();
+        historyService.create(dateValuesHistory);
+        return new BaseResponse().success(dateValuesHistory);
     }
 
     @Scheduled(cron = "0 00 19 * * ?")

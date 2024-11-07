@@ -33,4 +33,10 @@ public class DateValuesHistoryDto {
     private Long date;
 
     private long stubbornnessLevel;
+
+    private int quantity;
+
+    private int status;
+
+    private String createdBy;
 }

@@ -44,4 +44,10 @@ public class DateValuesHistory extends BaseEntity{
     @Column(name = "stubborness_level")
     private long stubbornnessLevel;
 
+    @Column(name = "status")
+    private int status;
+
+    @Column(name = "quantity")
+    private int quantity;
+
 }

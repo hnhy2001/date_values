@@ -63,4 +63,9 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     public BaseResponse crawlData(@RequestParam Long date){
         return dateValuesService.crawlData(date);
     }
+
+    @PostMapping("prime-numbers")
+    public BaseResponse createprimeNumbers(@RequestBody SpecialCycleStatisticsReq req) throws Exception {
+        return dateValuesService.createPrimeNumbers(req);
+    }
 }
