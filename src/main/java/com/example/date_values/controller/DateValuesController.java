@@ -68,4 +68,9 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     public BaseResponse createprimeNumbers(@RequestBody SpecialCycleStatisticsReq req) throws Exception {
         return dateValuesService.createPrimeNumbers(req);
     }
+
+    @PostMapping("search-rage-numbers")
+    public BaseResponse searchRangeNumbers(@RequestBody SpecialCycleStatisticsReq req) throws Exception {
+        return dateValuesService.searchRangeNumbers(req);
+    }
 }

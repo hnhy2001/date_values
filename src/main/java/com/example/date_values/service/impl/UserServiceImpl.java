@@ -133,8 +133,8 @@ public class UserServiceImpl extends BaseServiceImpl<User> implements UserServic
 
     @Override
     public BaseResponse unlockUser(Long id) throws Exception {
-        User user = userRepository.findAllById(id);
-        if (user == null || user.getIsActive() == 1){
+        User user = this.getById(id);
+        if (user == null || user.getIsActive() != 1){
             return new BaseResponse().fail("Tài khoản không tồn tại!");
         }
         user.setStatus(1);

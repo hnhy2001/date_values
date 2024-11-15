@@ -1,8 +1,11 @@
 package com.example.date_values.service.impl;
 
+import com.example.date_values.dto.DateValuesDto;
 import com.example.date_values.entity.DateValues;
 import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.model.reponse.BaseResponse;
+import com.example.date_values.model.reponse.SearchRangeNumberItemRes;
+import com.example.date_values.model.reponse.SearchRangeNumbersRes;
 import com.example.date_values.model.reponse.SpecialCycleStatisticsRes;
 import com.example.date_values.model.request.CreatePrimeNumbersReq;
 import com.example.date_values.model.request.SearchReq;
@@ -13,6 +16,7 @@ import com.example.date_values.repository.DateValuesRepository;
 import com.example.date_values.service.DateValuesHistoryService;
 import com.example.date_values.service.DateValuesService;
 import com.example.date_values.util.DateUtil;
+import com.example.date_values.util.MapperUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -260,6 +264,51 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         historyService.create(dateValuesHistory);
         return new BaseResponse().success(dateValuesHistory);
     }
+
+    @Override
+    public BaseResponse searchRangeNumbers(SpecialCycleStatisticsReq req) {
+        int maxGapCheck = this.find(req).getMaxGap();
+        SearchReq searchReq = SearchReq.builder()
+                .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
+                .page(0)
+                .size(30000)
+                .sort("id,asc")
+                .build();
+        List<DateValues> dateValuesList = this.search(searchReq).getContent();
+        List<SearchRangeNumberItemRes> itemList = new ArrayList<>();
+        int countGap = 1;
+        int maxGap = 0;
+        Long maxEndDate;
+        for (DateValues element : dateValuesList) {
+            if (!req.getData().contains(Integer.parseInt(element.getValue()))) {
+                countGap++;
+                if (countGap >= maxGap) {
+                    maxGap = countGap;
+                    maxEndDate = element.getDate();
+                    maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
+                    if (maxGap == maxGapCheck) {
+                        Long maxEndDateItem = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxEndDate : DateUtil.sum(maxEndDate, 1);
+                        SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                .to(maxEndDateItem)
+                                .from(DateUtil.subtract(maxEndDateItem, maxGap))
+                                .build();
+                        itemList.add(item);
+                    }
+                }
+            } else {
+                countGap = 1;
+            }
+        }
+
+        SearchRangeNumbersRes result = SearchRangeNumbersRes.builder()
+                .dateValues(MapperUtil.mapEntityListIntoDtoPage(dateValuesList, DateValuesDto.class))
+                .numbers(req.getData())
+                .dateList(itemList)
+                .build();
+
+        return new BaseResponse().success(result);
+    }
+
 
     @Scheduled(cron = "0 00 19 * * ?")
     public BaseResponse ScheduledCrawl(){

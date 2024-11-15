@@ -13,4 +13,5 @@ public interface DateValuesService extends BaseService<DateValues> {
     BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req) throws Exception;
     BaseResponse crawlData(Long date);
     BaseResponse createPrimeNumbers(SpecialCycleStatisticsReq req) throws Exception;
+    BaseResponse searchRangeNumbers(SpecialCycleStatisticsReq req);
 }
