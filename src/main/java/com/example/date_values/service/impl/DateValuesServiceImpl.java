@@ -267,7 +267,6 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
 
     @Override
     public BaseResponse searchRangeNumbers(SpecialCycleStatisticsReq req) {
-        int maxGapCheck = this.find(req).getMaxGap();
         SearchReq searchReq = SearchReq.builder()
                 .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
                 .page(0)
@@ -275,6 +274,15 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .sort("id,asc")
                 .build();
         List<DateValues> dateValuesList = this.search(searchReq).getContent();
+        if (req.getData().isEmpty()){
+            SearchRangeNumbersRes result = SearchRangeNumbersRes.builder()
+                    .dateValues(MapperUtil.mapEntityListIntoDtoPage(dateValuesList, DateValuesDto.class))
+//                    .numbers(req.getData())
+//                    .dateList(itemList)
+                    .build();
+            return new BaseResponse().success(result);
+        }
+        int maxGapCheck = this.find(req).getMaxGap();
         List<SearchRangeNumberItemRes> itemList = new ArrayList<>();
         int countGap = 1;
         int maxGap = 0;
