@@ -15,4 +15,5 @@ public class SpecialCycleStatisticsReq {
     private Long startDate;
     private Long endDate;
     private List<Integer> data;
+    private int gap;
 }

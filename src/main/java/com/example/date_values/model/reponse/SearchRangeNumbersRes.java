@@ -17,4 +17,5 @@ public class SearchRangeNumbersRes {
     private List<DateValuesDto> dateValues;
     private List<Integer> numbers;
     private List<SearchRangeNumberItemRes> dateList;
+    int maxGap;
 }
