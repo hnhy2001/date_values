@@ -73,4 +73,9 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     public BaseResponse searchRangeNumbers(@RequestBody SpecialCycleStatisticsReq req) throws Exception {
         return dateValuesService.searchRangeNumbers(req);
     }
+
+    @GetMapping("crawl-all-data")
+    public BaseResponse crawlData(){
+        return dateValuesService.crawlAllData();
+    }
 }

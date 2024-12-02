@@ -14,4 +14,5 @@ public interface DateValuesService extends BaseService<DateValues> {
     BaseResponse crawlData(Long date);
     BaseResponse createPrimeNumbers(SpecialCycleStatisticsReq req) throws Exception;
     BaseResponse searchRangeNumbers(SpecialCycleStatisticsReq req);
+    BaseResponse crawlAllData();
 }

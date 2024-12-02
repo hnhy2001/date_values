@@ -1,6 +1,7 @@
 package com.example.date_values.service.impl;
 
 import com.example.date_values.dto.DateValuesDto;
+import com.example.date_values.entity.DateMultiValues;
 import com.example.date_values.entity.DateValues;
 import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.model.reponse.BaseResponse;
@@ -25,6 +26,9 @@ import org.springframework.data.relational.core.sql.In;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,7 +64,23 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .size(30000)
                 .sort("date,asc")
                 .build();
-        List<DateValues> dateValuesList = this.search(searchReq).getContent();
+        List<DateValues> data = this.search(searchReq).getContent();
+        List<DateValues> dateValuesList = new ArrayList<>();
+        if (req.getHead() == 1){
+            dateValuesList = data.stream()
+                    .filter(e -> e.getValue() != null)
+                    .map(e -> {
+                        e.setValue(e.getValue().substring(e.getValue().length() - 2));
+                        return e;
+                    }).collect(Collectors.toList());
+        }else {
+            dateValuesList = data.stream()
+                    .filter(e -> e.getValue() != null)
+                    .map(e -> {
+                        e.setValue(e.getValue().substring(0,2));
+                        return e;
+                    }).collect(Collectors.toList());
+        }
         Map<Long, Integer> dateValuesMap = new HashMap<>();
         int countGap = 1;
         int maxGap = 0;
@@ -89,16 +109,34 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
         Long maxStartDate = DateUtil.subtract(maxEndDate, maxGap);
 
-        searchReq = SearchReq.builder()
-                .filter("id>0;value=in=(" + req.getData().stream()
-                        .map(String::valueOf)
-                        .collect(Collectors.joining(",")) + ")")
+        SearchReq searchReqCheck = SearchReq.builder()
+                .filter("id>0")
                 .page(0)
-                .size(1)
+                .size(30000)
                 .sort("date,desc")
                 .build();
+        DateValues dateValues = new DateValues();
+        List<DateValues> dateValuesCheck = this.search(searchReqCheck).getContent();
+        if (req.getHead() == 1){
+            for (DateValues element : dateValuesCheck) {
+                if (element.getValue() != null){
+                    if (req.getData().contains(Integer.parseInt(element.getValue().substring(element.getValue().length() - 2)))) {
+                        dateValues = element;
+                    }
+                }
+            }
+        }else {
+            for (DateValues element : dateValuesCheck) {
+                if (element.getValue() != null){
+                    if (req.getData().contains(Integer.parseInt(element.getValue().substring(0,2)))) {
+                        dateValues = element;
+                    }
+                }
+            }
+        }
 
-        DateValues dateValues = this.search(searchReq).getContent().get(0);
+
+
         SpecialCycleStatisticsRes res;
         if (check == 1 ){
             res = SpecialCycleStatisticsRes.builder()
@@ -148,7 +186,7 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 check = 50;
                 break; // optional
             case 20:
-                check = 45;
+                check = 48;
                 break;
             case 25:
                 check = 40;
@@ -179,12 +217,14 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
             SearchReq searchReq = SearchReq.builder()
                     .filter("id>0")
                     .page(0)
-                    .size(check + 1)
+                    .size(check + 3)
                     .sort("date,desc")
                     .build();
             List<DateValues> tempDateValues = this.search(searchReq).getContent();
             List<DateValues> dateValues = new ArrayList<>(tempDateValues);
             merge = Integer.parseInt(dateValues.remove(check).getValue());
+            dateValues.remove(dateValues.size() - 1);
+            dateValues.remove(dateValues.size()-1);
             checkList = dateValues.stream().map(e -> Integer.parseInt(e.getValue())).collect(Collectors.toList());
             check++;
         }while (checkList.contains(merge));
@@ -192,8 +232,8 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         for (int i = 0; i < 1000000; i++) {
             List<Integer> uniqueRandomNumbers = generateUniqueRandomNumbers(req.getQuantity() - 1, checkList);
             uniqueRandomNumbers.add(merge);
-            SpecialCycleStatisticsRes result = find(SpecialCycleStatisticsReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).data(uniqueRandomNumbers).build());
-            if (result.getMaxGap() - result.getStubbornnessLevel() < 5){
+            SpecialCycleStatisticsRes result = find(SpecialCycleStatisticsReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).data(uniqueRandomNumbers).head(0).build());
+            if (result.getMaxGap() - result.getStubbornnessLevel() < 5 && result.getMaxGap() - result.getStubbornnessLevel() > 1){
                 DateValuesHistory dateValuesHistory = DateValuesHistory.builder()
                         .startDate(result.getStartDate())
                         .endDate(result.getEndDate())
@@ -229,7 +269,7 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
 
                 Element valueElement = doc.selectFirst("span#mb_prizeDB_item0");
                 if (valueElement != null) {
-                    String value = valueElement.text().substring(valueElement.text().length() - 2); // Lấy nội dung text bên trong thẻ div
+                    String value = valueElement.text(); // Lấy nội dung text bên trong thẻ div
                     DateValues dateValues = DateValues.builder()
                             .date(date)
                             .value(value)
@@ -296,64 +336,130 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         int countGap = 1;
         int maxGap = 0;
         Long maxEndDate;
-        if (req.getGap() == 0) {
-            for (DateValues element : dateValuesList) {
-                if (element.getValue() != null){
-                    if (!req.getData().contains(Integer.parseInt(element.getValue()))) {
-                        countGap++;
-                        if (countGap >= maxGap) {
-                            maxGap = countGap;
-                            maxEndDate = element.getDate();
-                            maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
-                            if (maxGap == maxGapCheck) {
-                                Long maxEndDateItem = maxEndDate;
+        if (req.getHead() == 1){
+            if (req.getGap() == 0) {
+                for (DateValues element : dateValuesList) {
+                    if (element.getValue() != null){
+                        if (!req.getData().contains(Integer.parseInt(element.getValue().substring(element.getValue().length() -2)))) {
+                            countGap++;
+                            if (countGap >= maxGap) {
+                                maxGap = countGap;
+                                maxEndDate = element.getDate();
+                                maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
+                                if (maxGap == maxGapCheck) {
+                                    Long maxEndDateItem = maxEndDate;
 //                                if (findResult.getEndDate() != 0){
 //                                    maxEndDateItem = DateUtil.subtract(maxEndDateItem, 1);
 //                                }
-                                SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
-                                        .to(maxEndDateItem)
-                                        .from(DateUtil.subtract(maxEndDateItem, maxGap-1))
-                                        .build();
-                                itemList.add(item);
+                                    SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                            .to(maxEndDateItem)
+                                            .from(DateUtil.subtract(maxEndDateItem, maxGap-1))
+                                            .build();
+                                    itemList.add(item);
+                                }
                             }
+                        } else {
+                            countGap = 1;
                         }
-                    } else {
-                        countGap = 1;
                     }
                 }
             }
-        }
 
-        else {
-            for (int i = 0; i < dateValuesList.size(); i++) {
-                if (dateValuesList.get(i).getValue() != null){
-                    if (!req.getData().contains(Integer.parseInt(dateValuesList.get(i).getValue()))) {
-                        countGap++;
-                        if (countGap == req.getGap()){
-                            maxGap = countGap;
-                            if (i == dateValuesList.size() - 1) {
-                                maxEndDate = dateValuesList.get(i).getDate();
-                                Long maxEndDateItem = maxEndDate;
-                                SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
-                                        .to(maxEndDateItem)
-                                        .from(DateUtil.subtract(maxEndDateItem, countGap - 2))
-                                        .build();
-                                itemList.add(item);
-                            }else {
-                                if (req.getData().contains(Integer.parseInt(dateValuesList.get(i+1).getValue()))) {
+            else {
+                for (int i = 0; i < dateValuesList.size(); i++) {
+                    if (dateValuesList.get(i).getValue() != null){
+                        if (!req.getData().contains(Integer.parseInt(dateValuesList.get(i).getValue().substring(dateValuesList.get(i).getValue().length() - 2)))) {
+                            countGap++;
+                            if (countGap == req.getGap()){
+                                maxGap = countGap;
+                                if (i == dateValuesList.size() - 1) {
                                     maxEndDate = dateValuesList.get(i).getDate();
-                                    maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
                                     Long maxEndDateItem = maxEndDate;
                                     SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
                                             .to(maxEndDateItem)
                                             .from(DateUtil.subtract(maxEndDateItem, countGap - 2))
                                             .build();
                                     itemList.add(item);
+                                }else {
+                                    if (req.getData().contains(Integer.parseInt(dateValuesList.get(i+1).getValue().substring(dateValuesList.get(i).getValue().length() - 2)))) {
+                                        maxEndDate = dateValuesList.get(i).getDate();
+                                        maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
+                                        Long maxEndDateItem = maxEndDate;
+                                        SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                                .to(maxEndDateItem)
+                                                .from(DateUtil.subtract(maxEndDateItem, countGap - 2))
+                                                .build();
+                                        itemList.add(item);
+                                    }
                                 }
                             }
+                        } else {
+                            countGap = 1;
                         }
-                    } else {
-                        countGap = 1;
+                    }
+                }
+            }
+        }
+        else {
+            if (req.getGap() == 0) {
+                for (DateValues element : dateValuesList) {
+                    if (element.getValue() != null){
+                        if (!req.getData().contains(Integer.parseInt(element.getValue().substring(0,2)))) {
+                            countGap++;
+                            if (countGap >= maxGap) {
+                                maxGap = countGap;
+                                maxEndDate = element.getDate();
+                                maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
+                                if (maxGap == maxGapCheck) {
+                                    Long maxEndDateItem = maxEndDate;
+//                                if (findResult.getEndDate() != 0){
+//                                    maxEndDateItem = DateUtil.subtract(maxEndDateItem, 1);
+//                                }
+                                    SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                            .to(maxEndDateItem)
+                                            .from(DateUtil.subtract(maxEndDateItem, maxGap-1))
+                                            .build();
+                                    itemList.add(item);
+                                }
+                            }
+                        } else {
+                            countGap = 1;
+                        }
+                    }
+                }
+            }
+
+            else {
+                for (int i = 0; i < dateValuesList.size(); i++) {
+                    if (dateValuesList.get(i).getValue() != null){
+                        if (!req.getData().contains(Integer.parseInt(dateValuesList.get(i).getValue().substring(0,2)))) {
+                            countGap++;
+                            if (countGap == req.getGap()){
+                                maxGap = countGap;
+                                if (i == dateValuesList.size() - 1) {
+                                    maxEndDate = dateValuesList.get(i).getDate();
+                                    Long maxEndDateItem = maxEndDate;
+                                    SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                            .to(maxEndDateItem)
+                                            .from(DateUtil.subtract(maxEndDateItem, countGap - 2))
+                                            .build();
+                                    itemList.add(item);
+                                }else {
+                                    if (req.getData().contains(Integer.parseInt(dateValuesList.get(i+1).getValue().substring(0,2)))) {
+                                        maxEndDate = dateValuesList.get(i).getDate();
+                                        maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
+                                        Long maxEndDateItem = maxEndDate;
+                                        SearchRangeNumberItemRes item = SearchRangeNumberItemRes.builder()
+                                                .to(maxEndDateItem)
+                                                .from(DateUtil.subtract(maxEndDateItem, countGap - 2))
+                                                .build();
+                                        itemList.add(item);
+                                    }
+                                }
+                            }
+                        } else {
+                            countGap = 1;
+                        }
                     }
                 }
             }
@@ -369,6 +475,43 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         return new BaseResponse().success(result);
     }
 
+    @Override
+    public BaseResponse crawlAllData() {
+        List<String> dates = getDataDate();
+        List<DateValues> result = new ArrayList<>();
+        for (String date : dates) {
+            DateValues item = new DateValues();
+            DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+            // Chuyển chuỗi ngày thành LocalDate
+            LocalDate dateLocal = LocalDate.parse(date, inputFormatter);
+
+            // Định dạng lại ngày thành YYYYMMDD
+            DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+            String formattedDate = dateLocal.format(outputFormatter);
+
+            // Chuyển chuỗi YYYYMMDD thành Long
+            Long longDate = Long.parseLong(formattedDate);
+            item.setDate(longDate);
+
+            try {
+                // Kết nối đến trang web
+                String url = String.format("https://xoso.com.vn/xsmb-%s.html", date); // Đổi thành URL của trang web bạn muốn crawl
+                Document doc = Jsoup.connect(url).timeout(50000).userAgent("Mozilla").get();
+                String values = null;
+                if (doc.selectFirst("span#mb_prizeDB_item0") != null){
+                    values = doc.selectFirst("span#mb_prizeDB_item0").text();
+                }
+                item.setValue(values);
+                System.out.println(item);
+                result.add(item);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        this.getRepository().saveAll(result);
+        return new BaseResponse().success("check");
+    }
 
     @Scheduled(cron = "0 00 19 * * ?")
     public BaseResponse ScheduledCrawl(){
@@ -394,6 +537,29 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         }
 
         return new ArrayList<>(uniqueNumbers);
+    }
+
+    public List<String> getDataDate(){
+        // Định dạng ngày
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        // Ngày bắt đầu và ngày kết thúc
+        LocalDate startDate = LocalDate.of(2017, 1, 1);
+        LocalDate endDate = LocalDate.of(2017, 12, 31);
+
+        // Tạo một danh sách để chứa các ngày
+        List<String> dateList = new ArrayList<>();
+
+        // Vòng lặp qua tất cả các ngày từ startDate đến endDate
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            // Thêm ngày hiện tại vào danh sách
+            dateList.add(currentDate.format(formatter));
+            // Tiến đến ngày tiếp theo
+            currentDate = currentDate.plus(1, ChronoUnit.DAYS);
+        }
+
+        return dateList;
     }
 
 
