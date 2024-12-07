@@ -2,6 +2,7 @@ package com.example.date_values.entity;
 
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import javax.persistence.Table;
 @NoArgsConstructor
 @Data
 @Table(name = "user")
+@Builder
 public class User extends BaseEntity{
     @Column(unique = true, nullable = false)
     private String username;

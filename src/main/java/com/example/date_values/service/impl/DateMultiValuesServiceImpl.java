@@ -1,15 +1,12 @@
 package com.example.date_values.service.impl;
 
 import com.example.date_values.entity.DateMultiValues;
-import com.example.date_values.entity.DateValues;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateMultiValuesRepository;
 import com.example.date_values.service.DateMultiValuesService;
-import com.example.date_values.service.DateValuesService;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -97,8 +94,8 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
         // Ngày bắt đầu và ngày kết thúc
-        LocalDate startDate = LocalDate.of(2010, 1, 1);
-        LocalDate endDate = LocalDate.of(2010, 12, 31);
+        LocalDate startDate = LocalDate.of(2017, 1, 1);
+        LocalDate endDate = LocalDate.of(2023, 12, 31);
 
         // Tạo một danh sách để chứa các ngày
         List<String> dateList = new ArrayList<>();
