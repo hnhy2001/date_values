@@ -261,7 +261,7 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
             try {
                 // Kết nối đến trang web
                 String url = String.format("https://xoso.com.vn/xsmb-%s.html", dateString); // Đổi thành URL của trang web bạn muốn crawl
-                Document doc = Jsoup.connect(url).timeout(5000).userAgent("Mozilla").get();
+                Document doc = Jsoup.connect(url).timeout(50000).userAgent("Mozilla").get();
 
                 Element valueElement = doc.selectFirst("span#mb_prizeDB_item0");
                 if (valueElement != null) {
@@ -320,7 +320,7 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .build();
         List<DateValues> data = this.search(searchReq).getContent();
         List<DateValues> dateValuesList = new ArrayList<>();
-        if (req.getHead() == 1) {
+        if (req.getHead() != 1) {
             dateValuesList = data.stream()
                     .filter(e -> e.getValue() != null)
                     .map(e -> {

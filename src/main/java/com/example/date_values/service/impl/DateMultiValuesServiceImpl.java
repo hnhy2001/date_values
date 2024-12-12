@@ -2,9 +2,15 @@ package com.example.date_values.service.impl;
 
 import com.example.date_values.entity.DateMultiValues;
 import com.example.date_values.model.reponse.BaseResponse;
+import com.example.date_values.model.reponse.NumberQuantityItemRes;
+import com.example.date_values.model.reponse.QuantityValuesByDateAndNumbersItemRes;
+import com.example.date_values.model.reponse.QuantityValuesByDateAndNumbersRes;
+import com.example.date_values.model.request.GetQuantityValuesByDateAndNumberReq;
+import com.example.date_values.model.request.SearchReq;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateMultiValuesRepository;
 import com.example.date_values.service.DateMultiValuesService;
+import com.example.date_values.util.DateUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +20,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -48,7 +55,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
             try {
                 // Kết nối đến trang web
                 String url = String.format("https://xoso.com.vn/xsmb-%s.html", date); // Đổi thành URL của trang web bạn muốn crawl
-                Document doc = Jsoup.connect(url).timeout(5000).userAgent("Mozilla").get();
+                Document doc = Jsoup.connect(url).timeout(50000).userAgent("Mozilla").get();
                 String values = null;
                 if (doc.selectFirst("span#mb_prizeDB_item0") != null){
                     values = doc.selectFirst("span#mb_prizeDB_item0").text() + ","
@@ -80,6 +87,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
                             + doc.selectFirst("span#mb_prize7_item3").text();
                 }
                 item.setValue(values);
+                item.setIsActive(1);
                 result.add(item);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -89,13 +97,63 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         return new BaseResponse().success("check");
     }
 
+    @Override
+    public BaseResponse getQuantityValuesByDateAndNumber(GetQuantityValuesByDateAndNumberReq req) {
+        if (req.getStartDate() < 20100101 || req.getEndDate() > DateUtil.getCurrenDate()) {
+            return new BaseResponse().fail("Chỉ thống kê từ ngày 01/01/2010 đến nay!");
+        }
+        SearchReq searchReq = SearchReq.builder()
+                .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
+                .page(0)
+                .size(30000)
+                .sort("date,asc")
+                .build();
+        List<DateMultiValues> data = this.search(searchReq).getContent();
+        QuantityValuesByDateAndNumbersRes result = new QuantityValuesByDateAndNumbersRes();
+        List<QuantityValuesByDateAndNumbersItemRes> resultIem = new ArrayList<>();
+        for (DateMultiValues item : data) {
+            List<NumberQuantityItemRes> numberQuantityItemResList = new ArrayList<>();
+            for (String number : req.getNumbers()){
+                NumberQuantityItemRes numberQuantityItemRes = NumberQuantityItemRes
+                        .builder()
+                        .number(number)
+                        .quantity(0)
+                        .build();
+                numberQuantityItemResList.add(numberQuantityItemRes);
+            }
+            QuantityValuesByDateAndNumbersItemRes itemRes = QuantityValuesByDateAndNumbersItemRes
+                    .builder()
+                    .date(item.getDate())
+                    .values(item.getValue())
+                    .numberQuantityItemRes(numberQuantityItemResList)
+                    .build();
+            resultIem.add(itemRes);
+        }
+
+        for (QuantityValuesByDateAndNumbersItemRes item : resultIem){
+            List<String> values = Arrays.asList(item.getValues().split(","));
+            for (NumberQuantityItemRes numberQuantityItemRes : item.getNumberQuantityItemRes()){
+                List<String> numbers = Arrays.asList(numberQuantityItemRes.getNumber().split("-"));
+                for (String number : numbers){
+                    for(String value : values){
+                        if (value.substring(value.length() - 2).equals(number)){
+                            numberQuantityItemRes.setQuantity(numberQuantityItemRes.getQuantity() + 1);
+                        }
+                    }
+                }
+            }
+        }
+        result.setData(resultIem);
+        return new BaseResponse().success(result);
+    }
+
     public List<String> getDataDate(){
         // Định dạng ngày
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
         // Ngày bắt đầu và ngày kết thúc
-        LocalDate startDate = LocalDate.of(2017, 1, 1);
-        LocalDate endDate = LocalDate.of(2023, 12, 31);
+        LocalDate startDate = LocalDate.of(2024, 12, 3);
+        LocalDate endDate = LocalDate.of(2024, 12, 9);
 
         // Tạo một danh sách để chứa các ngày
         List<String> dateList = new ArrayList<>();

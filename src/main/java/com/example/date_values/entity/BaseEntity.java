@@ -33,11 +33,11 @@ public class BaseEntity {
     private Long updateDate;
 
     @Column(name = "created_by")
-//    @CreatedBy
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "updated_by")
-//    @LastModifiedBy
+    @LastModifiedBy
     private String updatedBy;
 
 }
