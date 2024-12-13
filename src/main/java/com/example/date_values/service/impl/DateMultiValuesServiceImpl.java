@@ -131,13 +131,17 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         }
 
         for (QuantityValuesByDateAndNumbersItemRes item : resultIem){
-            List<String> values = Arrays.asList(item.getValues().split(","));
-            for (NumberQuantityItemRes numberQuantityItemRes : item.getNumberQuantityItemRes()){
-                List<String> numbers = Arrays.asList(numberQuantityItemRes.getNumber().split("-"));
-                for (String number : numbers){
-                    for(String value : values){
-                        if (value.substring(value.length() - 2).equals(number)){
-                            numberQuantityItemRes.setQuantity(numberQuantityItemRes.getQuantity() + 1);
+            if (item.getValues() != null){
+                List<String> values = Arrays.asList(item.getValues().split(","));
+                for (NumberQuantityItemRes numberQuantityItemRes : item.getNumberQuantityItemRes()){
+                    List<String> numbers = Arrays.asList(numberQuantityItemRes.getNumber().split("-"));
+                    for (String number : numbers){
+                        for(String value : values){
+                            if (req.getHead() != 1 ?
+                                    value.substring(value.length() - 2).equals(number)
+                                    : value.substring(0,2).equals(number)){
+                                numberQuantityItemRes.setQuantity(numberQuantityItemRes.getQuantity() + 1);
+                            }
                         }
                     }
                 }

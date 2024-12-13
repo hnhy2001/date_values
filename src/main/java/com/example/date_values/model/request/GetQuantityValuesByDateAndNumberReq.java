@@ -14,4 +14,5 @@ public class GetQuantityValuesByDateAndNumberReq {
     private Long startDate;
     private Long endDate;
     private List<String> numbers;
+    private int head;
 }

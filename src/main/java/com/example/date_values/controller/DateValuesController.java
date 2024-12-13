@@ -5,6 +5,7 @@ import com.example.date_values.entity.DateValues;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.request.SearchReq;
 import com.example.date_values.model.request.SpecialCycleStatisticsReq;
+import com.example.date_values.model.request.StatisticValuesOnWeekReq;
 import com.example.date_values.model.request.TodayNumberStatisticsReq;
 import com.example.date_values.service.BaseService;
 import com.example.date_values.service.DateValuesService;
@@ -77,5 +78,10 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     @GetMapping("crawl-all-data")
     public BaseResponse crawlData(){
         return dateValuesService.crawlAllData();
+    }
+
+    @PostMapping("statistic-values-on-week")
+    public BaseResponse statisticValuesOnWeek(@RequestBody StatisticValuesOnWeekReq req) throws Exception {
+        return dateValuesService.statisticValuesOnWeek(req);
     }
 }

@@ -2,7 +2,9 @@ package com.example.date_values.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -114,5 +116,11 @@ public class DateUtil {
         // Chuyển đổi thành Long
         Long result = Long.parseLong(longDateString);
         return result;
+    }
+
+    public static LocalDate convertLongToLocalDate(Long yyyymmdd) throws DateTimeParseException {
+        String dateStr = yyyymmdd.toString();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        return LocalDate.parse(dateStr, formatter);
     }
 }

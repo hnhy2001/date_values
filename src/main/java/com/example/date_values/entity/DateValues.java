@@ -1,9 +1,6 @@
 package com.example.date_values.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -14,6 +11,8 @@ import javax.persistence.Table;
 @Data
 @Table(name = "date_values")
 @Builder
+@Getter
+@Setter
 public class DateValues extends BaseEntity {
     private Long date;
     private String value;

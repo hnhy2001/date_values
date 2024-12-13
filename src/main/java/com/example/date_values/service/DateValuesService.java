@@ -6,6 +6,7 @@ import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.reponse.SpecialCycleStatisticsRes;
 import com.example.date_values.model.request.CreatePrimeNumbersReq;
 import com.example.date_values.model.request.SpecialCycleStatisticsReq;
+import com.example.date_values.model.request.StatisticValuesOnWeekReq;
 import com.example.date_values.model.request.TodayNumberStatisticsReq;
 
 public interface DateValuesService extends BaseService<DateValues> {
@@ -15,4 +16,5 @@ public interface DateValuesService extends BaseService<DateValues> {
     BaseResponse createPrimeNumbers(SpecialCycleStatisticsReq req) throws Exception;
     BaseResponse searchRangeNumbers(SpecialCycleStatisticsReq req);
     BaseResponse crawlAllData();
+    BaseResponse statisticValuesOnWeek(StatisticValuesOnWeekReq req);
 }

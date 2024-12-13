@@ -4,12 +4,10 @@ import com.example.date_values.dto.DateValuesDto;
 import com.example.date_values.entity.DateValues;
 import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.entity.User;
-import com.example.date_values.model.reponse.BaseResponse;
-import com.example.date_values.model.reponse.SearchRangeNumberItemRes;
-import com.example.date_values.model.reponse.SearchRangeNumbersRes;
-import com.example.date_values.model.reponse.SpecialCycleStatisticsRes;
+import com.example.date_values.model.reponse.*;
 import com.example.date_values.model.request.SearchReq;
 import com.example.date_values.model.request.SpecialCycleStatisticsReq;
+import com.example.date_values.model.request.StatisticValuesOnWeekReq;
 import com.example.date_values.model.request.TodayNumberStatisticsReq;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateValueHistoryRepository;
@@ -22,6 +20,7 @@ import com.example.date_values.util.MapperUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -29,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.WeekFields;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -459,6 +459,94 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
         }
         this.getRepository().saveAll(result);
         return new BaseResponse().success("check");
+    }
+
+    @Override
+    public BaseResponse statisticValuesOnWeek(StatisticValuesOnWeekReq req) {
+        if (req.getStartDate() < 20100101 || req.getEndDate() > DateUtil.getCurrenDate()) {
+            return new BaseResponse().fail("Chỉ thống kê từ ngày 01/01/2010 đến nay!");
+        }
+        SearchReq searchReq = SearchReq.builder()
+                .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
+                .page(0)
+                .size(30000)
+                .sort("date,asc")
+                .build();
+        List<DateValues> data = this.search(searchReq).getContent();
+        if (data == null || data.isEmpty()) {
+            // Xử lý khi dữ liệu trống
+            StatisticValuesOnWeekRes emptyResult = new StatisticValuesOnWeekRes(
+                    Collections.emptyList(),
+                    Collections.emptyList()
+            );
+            return new BaseResponse().success(emptyResult);
+        }
+
+        // Sắp xếp dữ liệu theo ngày tăng dần
+        List<DateValues> sortedData = data.stream()
+                .sorted(Comparator.comparing(DateValues::getDate))
+                .collect(Collectors.toList());
+
+        // Lấy ngày đầu tiên trong dữ liệu
+        LocalDate firstDate;
+        try {
+            firstDate = DateUtil.convertLongToLocalDate(sortedData.get(0).getDate());
+        } catch (Exception e) {
+            // Xử lý nếu ngày đầu tiên không hợp lệ
+            System.err.println("Ngày đầu tiên không hợp lệ: " + sortedData.get(0));
+            StatisticValuesOnWeekRes errorResult = new StatisticValuesOnWeekRes(
+                    Collections.emptyList(),
+                    Collections.emptyList()
+            );
+            return new BaseResponse().fail("Ngày đầu tiên không hợp lệ.");
+        }
+
+        // Nhóm dữ liệu theo tuần, bắt đầu từ tuần 1
+        Map<Integer, List<DateValues>> groupedData = sortedData.stream()
+                .collect(Collectors.groupingBy(
+                        item -> {
+                            try {
+                                LocalDate currentDate = DateUtil.convertLongToLocalDate(item.getDate());
+                                long weeksBetween = ChronoUnit.WEEKS.between(firstDate, currentDate);
+                                return (int) weeksBetween + 1; // Tuần bắt đầu từ 1
+                            } catch (Exception e) {
+                                // Xử lý ngoại lệ nếu ngày không hợp lệ
+                                System.err.println("Invalid date format for item: " + item);
+                                return -1; // Bạn có thể xử lý theo cách khác nếu muốn
+                            }
+                        }
+                ));
+
+        // Loại bỏ các nhóm có tuần = -1 (nếu có)
+        groupedData.remove(-1);
+        ModelMapper modelMapper = new ModelMapper();
+        Map<Integer, List<DateValuesDto>> groupedDataDTO = new HashMap<>();
+        for (Map.Entry<Integer, List<DateValues>> entry : groupedData.entrySet()) {
+            List<DateValuesDto> dtoList = entry.getValue().stream()
+                    .map(e -> modelMapper.map(e, DateValuesDto.class))
+                    .collect(Collectors.toList());
+            groupedDataDTO.put(entry.getKey(), dtoList);
+        }
+
+        // Tạo danh sách kết quả cho nhóm theo tuần
+        List<StatisticValuesOnWeekItemRes> weeklyDataList = groupedDataDTO.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()) // Sắp xếp theo tuần tăng dần
+                .map(entry -> new StatisticValuesOnWeekItemRes(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
+
+        // Tạo danh sách các giá trị duy nhất với chỉ hai ký tự cuối cùng
+        List<String> uniqueValues = sortedData.stream()
+                .map(DateValues::getValue) // Trích xuất trường 'value'
+                .filter(Objects::nonNull) // Loại bỏ null để tránh lỗi
+                .map(value -> value.length() >= 2 ? value.substring(value.length() - 2) : value)
+                .distinct() // Loại bỏ các giá trị trùng lặp
+                .collect(Collectors.toList());
+
+        // Tạo đối tượng Result
+        StatisticValuesOnWeekRes result = new StatisticValuesOnWeekRes(weeklyDataList, uniqueValues);
+
+        // Trả về phản hồi thành công
+        return new BaseResponse().success(result);
     }
 
     @Scheduled(cron = "0 00 19 * * ?")
