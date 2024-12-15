@@ -25,9 +25,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -506,13 +508,20 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .collect(Collectors.groupingBy(
                         item -> {
                             try {
+                                // Chuyển đổi ngày từ item
                                 LocalDate currentDate = DateUtil.convertLongToLocalDate(item.getDate());
-                                long weeksBetween = ChronoUnit.WEEKS.between(firstDate, currentDate);
+
+                                // Đưa firstDate và currentDate về ngày đầu tuần (Thứ Hai)
+                                LocalDate firstMonday = firstDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                                LocalDate currentMonday = currentDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+                                // Tính số tuần giữa firstMonday và currentMonday
+                                long weeksBetween = ChronoUnit.WEEKS.between(firstMonday, currentMonday);
                                 return (int) weeksBetween + 1; // Tuần bắt đầu từ 1
                             } catch (Exception e) {
-                                // Xử lý ngoại lệ nếu ngày không hợp lệ
+                                // Xử lý ngoại lệ
                                 System.err.println("Invalid date format for item: " + item);
-                                return -1; // Bạn có thể xử lý theo cách khác nếu muốn
+                                return -1; // Xử lý riêng các item lỗi
                             }
                         }
                 ));
