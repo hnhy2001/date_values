@@ -3,10 +3,7 @@ package com.example.date_values.controller;
 import com.example.date_values.dto.DateValuesDto;
 import com.example.date_values.entity.DateValues;
 import com.example.date_values.model.reponse.BaseResponse;
-import com.example.date_values.model.request.SearchReq;
-import com.example.date_values.model.request.SpecialCycleStatisticsReq;
-import com.example.date_values.model.request.StatisticValuesOnWeekReq;
-import com.example.date_values.model.request.TodayNumberStatisticsReq;
+import com.example.date_values.model.request.*;
 import com.example.date_values.service.BaseService;
 import com.example.date_values.service.DateValuesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,5 +80,10 @@ public class DateValuesController extends BaseController<DateValues, DateValuesD
     @PostMapping("statistic-values-on-week")
     public BaseResponse statisticValuesOnWeek(@RequestBody StatisticValuesOnWeekReq req) throws Exception {
         return dateValuesService.statisticValuesOnWeek(req);
+    }
+
+    @PostMapping("statistic-frequency")
+    public BaseResponse statisticFrequency(@RequestBody StatisticFrequencyReq req) throws Exception {
+        return dateValuesService.statisticFrequency(req);
     }
 }

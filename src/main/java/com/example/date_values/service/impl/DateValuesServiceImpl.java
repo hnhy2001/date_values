@@ -5,10 +5,7 @@ import com.example.date_values.entity.DateValues;
 import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.entity.User;
 import com.example.date_values.model.reponse.*;
-import com.example.date_values.model.request.SearchReq;
-import com.example.date_values.model.request.SpecialCycleStatisticsReq;
-import com.example.date_values.model.request.StatisticValuesOnWeekReq;
-import com.example.date_values.model.request.TodayNumberStatisticsReq;
+import com.example.date_values.model.request.*;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateValueHistoryRepository;
 import com.example.date_values.repository.DateValuesRepository;
@@ -544,11 +541,16 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                 .collect(Collectors.toList());
 
         // Tạo danh sách các giá trị duy nhất với chỉ hai ký tự cuối cùng
-        List<String> uniqueValues = sortedData.stream()
-                .map(DateValues::getValue) // Trích xuất trường 'value'
-                .filter(Objects::nonNull) // Loại bỏ null để tránh lỗi
+//        List<String> uniqueValues = sortedData.stream()
+//                .map(DateValues::getValue) // Trích xuất trường 'value'
+//                .filter(Objects::nonNull) // Loại bỏ null để tránh lỗi
+//                .map(value -> value.length() >= 2 ? value.substring(value.length() - 2) : value)
+//                .distinct() // Loại bỏ các giá trị trùng lặp
+//                .collect(Collectors.toList());
+        List<String> uniqueValues = weeklyDataList.stream().map(e -> e.getItems().get(0).getValue())
+                .filter(Objects::nonNull)
                 .map(value -> value.length() >= 2 ? value.substring(value.length() - 2) : value)
-                .distinct() // Loại bỏ các giá trị trùng lặp
+                .distinct()
                 .collect(Collectors.toList());
 
         // Tạo đối tượng Result
@@ -556,6 +558,36 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
 
         // Trả về phản hồi thành công
         return new BaseResponse().success(result);
+    }
+
+    @Override
+    public BaseResponse statisticFrequency(StatisticFrequencyReq req) {
+        if (req.getStartDate() < 20100101 || req.getEndDate() > DateUtil.getCurrenDate()) {
+            return new BaseResponse().fail("Chỉ thống kê từ ngày 01/01/2010 đến nay!");
+        }
+        SearchReq searchReq = SearchReq.builder()
+                .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
+                .page(0)
+                .size(30000)
+                .sort("date,asc")
+                .build();
+        List<DateValues> data = this.search(searchReq).getContent();
+        // Sử dụng HashMap để đếm tần suất
+        Map<String, Integer> frequencyMap = new HashMap<>();
+
+        for (DateValues item : data) {
+            if (item.getValue() != null ){
+                String value = req.getHead() == 1 ? item.getValue().substring(0,2): item.getValue().substring(item.getValue().length() - 2);
+                frequencyMap.put(value, frequencyMap.getOrDefault(value, 0) + 1);
+            }
+            else {
+                frequencyMap.put("Lễ - Tết", frequencyMap.getOrDefault("Lễ - Tết", 0) + 1);
+            }
+            // Tăng giá trị tần suất
+        }
+
+
+        return new BaseResponse().success(frequencyMap);
     }
 
     @Scheduled(cron = "0 00 19 * * ?")
