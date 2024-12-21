@@ -14,4 +14,5 @@ import java.util.List;
 public class TodayNumberStatisticsReq {
     private int operatorType;
     private int quantity;
+    private int concurOccur;
 }

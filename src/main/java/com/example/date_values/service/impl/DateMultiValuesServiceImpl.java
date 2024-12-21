@@ -2,11 +2,9 @@ package com.example.date_values.service.impl;
 
 import com.example.date_values.entity.DateMultiValues;
 import com.example.date_values.entity.DateValues;
+import com.example.date_values.entity.DateValuesHistory;
 import com.example.date_values.model.reponse.*;
-import com.example.date_values.model.request.GetQuantityValuesByDateAndNumberReq;
-import com.example.date_values.model.request.SearchReq;
-import com.example.date_values.model.request.StatisticFrequencyReq;
-import com.example.date_values.model.request.StatisticMultiValuesReq;
+import com.example.date_values.model.request.*;
 import com.example.date_values.repository.BaseRepository;
 import com.example.date_values.repository.DateMultiValuesRepository;
 import com.example.date_values.service.DateMultiValuesService;
@@ -21,10 +19,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues> implements DateMultiValuesService {
@@ -234,6 +230,88 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         return new BaseResponse().success(find(req));
     }
 
+    @Override
+    public BaseResponse getTodayNumbersStatistics(TodayNumberStatisticsReq req) {
+        if (req.getQuantity() != 2 && req.getQuantity() != 3) {
+            return new BaseResponse().fail("quantity chỉ là 2 va 3");
+        }
+        int check = 0;
+        if (req.getOperatorType() == 0) {
+            if (req.getQuantity() == 2) {
+                check = 13;
+            }
+
+            if (req.getQuantity() == 3) {
+                check = 10;
+            }
+        } else {
+            if (req.getQuantity() == 2) {
+                check = 165;
+            }
+
+            if (req.getQuantity() == 3) {
+                check = 400;
+            }
+        }
+        List<Integer> checkList = new ArrayList<>();
+        SearchReq searchReq = SearchReq.builder()
+                .filter("id>0")
+                .page(0)
+                .size(check + 1)
+                .sort("date,desc")
+                .build();
+        List<DateMultiValues> tempDateValues = this.search(searchReq).getContent();
+        List<DateMultiValues> dateValues = new ArrayList<>(tempDateValues);
+        DateMultiValues dateValuesMerge = dateValues.remove(check);
+        List<Integer> integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
+        dateValues.remove(dateValues.size() - 1);
+        dateValues.stream().forEach(e -> {
+            List<Integer> values = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(e.getValue().split(",")));
+            checkList.addAll(values);
+        });
+
+
+        for (int i = 0; i < 1000000; i++) {
+            List<Integer> uniqueRandomNumbers = generateUniqueRandomNumbers(req.getQuantity() - 1, checkList);
+            integerListMerge.removeAll(checkList);
+            if (!integerListMerge.isEmpty()) {
+                uniqueRandomNumbers.add(integerListMerge.get(0));
+            }else {
+                searchReq = SearchReq.builder()
+                        .filter("id>0")
+                        .page(0)
+                        .size(check + i)
+                        .sort("date,desc")
+                        .build();
+                tempDateValues = this.search(searchReq).getContent();
+                dateValues = new ArrayList<>(tempDateValues);
+                dateValuesMerge = dateValues.remove(check);
+                integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
+                dateValues.remove(dateValues.size() - 1);
+            }
+
+            StatisticMultiValuesRes result = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(uniqueRandomNumbers).build());
+            if (result.getMaxGap() - result.getStubbornnessLevel() < 5 && result.getMaxGap() - result.getStubbornnessLevel() > 1) {
+                return new BaseResponse().success(result);
+            }else {
+                searchReq = SearchReq.builder()
+                        .filter("id>0")
+                        .page(0)
+                        .size(check + i)
+                        .sort("date,desc")
+                        .build();
+                tempDateValues = this.search(searchReq).getContent();
+                dateValues = new ArrayList<>(tempDateValues);
+                dateValuesMerge = dateValues.remove(check + i - 1);
+                integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
+                dateValues.remove(dateValues.size() - 1);
+            }
+
+        }
+
+        return new BaseResponse().fail("Vui lòng thử lại lần nữa");
+    }
+
     public StatisticMultiValuesRes find(StatisticMultiValuesReq req) {
         SearchReq searchReq = SearchReq.builder()
                 .filter("id>0;date<=" + req.getEndDate() + ";date>=" + req.getStartDate())
@@ -250,6 +328,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         int check = 0;
         Long lastDate = 0L;
         Long duringDate = 0L;
+        int checkNull = 0;
         if (req.getConcurOccur() == 0) {
             for (DateMultiValues element : data) {
                 if (element.getValue() != null) {
@@ -267,7 +346,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
                     }
                 }
             }
-        }else {
+        } else {
             for (DateMultiValues element : data) {
                 if (element.getValue() != null) {
                     List<Integer> values = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(element.getValue().split(",")));
@@ -289,6 +368,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         maxGap = maxEndDate.equals(DateUtil.getCurrenDate()) ? maxGap - 1 : maxGap;
         Long maxStartDate = DateUtil.subtract(maxEndDate, maxGap);
 
+
         SearchReq searchReqCheck = SearchReq.builder()
                 .filter("id>0")
                 .page(0)
@@ -296,7 +376,22 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
                 .sort("date,desc")
                 .build();
         List<DateMultiValues> dateValuesCheck = this.search(searchReqCheck).getContent();
-        if(req.getConcurOccur() == 0){
+        for (DateMultiValues e : dateValuesCheck) {
+            if (e.getDate().equals(maxStartDate)) {
+                if (e.getValue() == null) {
+                    maxStartDate = DateUtil.subtract(maxStartDate, 1);
+                }
+            }
+        }
+        for (DateMultiValues e : dateValuesCheck) {
+            if (e.getDate() >= maxStartDate && e.getDate() <= maxEndDate) {
+                if (e.getValue() == null) {
+                    checkNull++;
+                }
+            }
+        }
+        maxStartDate = DateUtil.subtract(maxStartDate, checkNull);
+        if (req.getConcurOccur() == 0) {
             for (DateMultiValues element : dateValuesCheck) {
                 if (element.getValue() != null) {
                     List<Integer> values = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(element.getValue().split(",")));
@@ -306,7 +401,7 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
                     }
                 }
             }
-        }else{
+        } else {
             for (DateMultiValues element : dateValuesCheck) {
                 if (element.getValue() != null) {
                     List<Integer> values = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(element.getValue().split(",")));
@@ -363,5 +458,23 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         }
 
         return dateList;
+    }
+
+    public static List<Integer> generateUniqueRandomNumbers(int n, List<Integer> existingList) {
+        Random random = new Random();
+        Set<Integer> uniqueNumbers = new HashSet<>();
+
+
+        // Generate unique random numbers until we reach the desired count
+        while (uniqueNumbers.size() < n) {
+            int randomNumber = random.nextInt(100); // Random number between 0 and 99
+
+            // Check if the random number is not in the existing list
+            if (!existingList.contains(randomNumber)) {
+                uniqueNumbers.add(randomNumber);
+            }
+        }
+
+        return new ArrayList<>(uniqueNumbers);
     }
 }

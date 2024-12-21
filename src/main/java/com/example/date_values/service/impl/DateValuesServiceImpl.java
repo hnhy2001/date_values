@@ -157,7 +157,6 @@ public class DateValuesServiceImpl extends BaseServiceImpl<DateValues> implement
                     .check(check)
                     .build();
         }
-        System.out.println(res);
         return res;
     }
 

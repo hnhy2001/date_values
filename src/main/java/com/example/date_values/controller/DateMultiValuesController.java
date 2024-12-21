@@ -7,6 +7,7 @@ import com.example.date_values.entity.DateValues;
 import com.example.date_values.model.reponse.BaseResponse;
 import com.example.date_values.model.request.GetQuantityValuesByDateAndNumberReq;
 import com.example.date_values.model.request.StatisticMultiValuesReq;
+import com.example.date_values.model.request.TodayNumberStatisticsReq;
 import com.example.date_values.service.BaseService;
 import com.example.date_values.service.DateMultiValuesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,5 +41,10 @@ public class DateMultiValuesController extends BaseController<DateMultiValues, D
     @PostMapping("statistic")
     public BaseResponse getStatistic(@RequestBody StatisticMultiValuesReq req){
         return dateMultiValuesService.statistic(req);
+    }
+
+    @PostMapping("statistic-today-number")
+    public BaseResponse getTodayNumbersStatistics(@RequestBody TodayNumberStatisticsReq req){
+        return dateMultiValuesService.getTodayNumbersStatistics(req);
     }
 }
