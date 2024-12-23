@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.xml.crypto.Data;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -254,62 +255,47 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
             }
         }
         List<Integer> checkList = new ArrayList<>();
+        List<Integer> findList = new ArrayList<>();
         SearchReq searchReq = SearchReq.builder()
                 .filter("id>0")
                 .page(0)
-                .size(check + 1)
+                .size(30000)
                 .sort("date,desc")
                 .build();
         List<DateMultiValues> tempDateValues = this.search(searchReq).getContent();
-        List<DateMultiValues> dateValues = new ArrayList<>(tempDateValues);
-        DateMultiValues dateValuesMerge = dateValues.remove(check);
-        List<Integer> integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
-        dateValues.remove(dateValues.size() - 1);
-        dateValues.stream().forEach(e -> {
-            List<Integer> values = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(e.getValue().split(",")));
-            checkList.addAll(values);
-        });
-
-
-        for (int i = 0; i < 1000000; i++) {
-            List<Integer> uniqueRandomNumbers = generateUniqueRandomNumbers(req.getQuantity() - 1, checkList);
-            integerListMerge.removeAll(checkList);
-            if (!integerListMerge.isEmpty()) {
-                uniqueRandomNumbers.add(integerListMerge.get(0));
-            }else {
-                searchReq = SearchReq.builder()
-                        .filter("id>0")
-                        .page(0)
-                        .size(check + i)
-                        .sort("date,desc")
-                        .build();
-                tempDateValues = this.search(searchReq).getContent();
-                dateValues = new ArrayList<>(tempDateValues);
-                dateValuesMerge = dateValues.remove(check);
-                integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
-                dateValues.remove(dateValues.size() - 1);
+        StatisticMultiValuesRes result = new StatisticMultiValuesRes();
+        do {
+            for (int i = 0; i < tempDateValues.size(); i++) {
+                if (i < check){
+                    checkList.addAll(ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(","))));
+                }else {
+                    List<Integer> data = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(",")));
+                    data.removeAll(checkList);
+                    if (!data.isEmpty()){
+                        if (data.size() >= check){
+                            for (int j = 0; j < check; j++){
+                                findList.add(data.get(j));
+                            }
+                        }else {
+                            checkList.addAll(data);
+                            findList.addAll(generateUniqueRandomNumbers(req.getQuantity() - data.size(), checkList));
+                            findList.addAll(data);
+                        }
+                        StatisticMultiValuesRes resultTemp = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(findList).build());
+                        if (resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() < 5 && resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() >= 1){
+                            result = resultTemp;
+                            break;
+                        }else {
+                            findList.clear();
+                        }
+                    }
+                }
             }
+            check ++;
+        }while (result.getData() == null);
 
-            StatisticMultiValuesRes result = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(uniqueRandomNumbers).build());
-            if (result.getMaxGap() - result.getStubbornnessLevel() < 5 && result.getMaxGap() - result.getStubbornnessLevel() > 1) {
-                return new BaseResponse().success(result);
-            }else {
-                searchReq = SearchReq.builder()
-                        .filter("id>0")
-                        .page(0)
-                        .size(check + i)
-                        .sort("date,desc")
-                        .build();
-                tempDateValues = this.search(searchReq).getContent();
-                dateValues = new ArrayList<>(tempDateValues);
-                dateValuesMerge = dateValues.remove(check + i - 1);
-                integerListMerge = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(dateValuesMerge.getValue().split(",")));
-                dateValues.remove(dateValues.size() - 1);
-            }
-
-        }
-
-        return new BaseResponse().fail("Vui lòng thử lại lần nữa");
+//        StatisticMultiValuesRes result = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(findList).build());
+        return new BaseResponse().success(result);
     }
 
     public StatisticMultiValuesRes find(StatisticMultiValuesReq req) {
