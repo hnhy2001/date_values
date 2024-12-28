@@ -239,11 +239,11 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
         int check = 0;
         if (req.getOperatorType() == 0) {
             if (req.getQuantity() == 2) {
-                check = 13;
+                check = 11;
             }
 
             if (req.getQuantity() == 3) {
-                check = 10;
+                check = 9;
             }
         } else {
             if (req.getQuantity() == 2) {
@@ -264,35 +264,36 @@ public class DateMultiValuesServiceImpl extends BaseServiceImpl<DateMultiValues>
                 .build();
         List<DateMultiValues> tempDateValues = this.search(searchReq).getContent();
         StatisticMultiValuesRes result = new StatisticMultiValuesRes();
-        do {
-            for (int i = 0; i < tempDateValues.size(); i++) {
-                if (i < check){
-                    checkList.addAll(ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(","))));
-                }else {
-                    List<Integer> data = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(",")));
-                    data.removeAll(checkList);
-                    if (!data.isEmpty()){
-                        if (data.size() >= check){
-                            for (int j = 0; j < check; j++){
-                                findList.add(data.get(j));
-                            }
-                        }else {
-                            checkList.addAll(data);
-                            findList.addAll(generateUniqueRandomNumbers(req.getQuantity() - data.size(), checkList));
-                            findList.addAll(data);
-                        }
-                        StatisticMultiValuesRes resultTemp = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(findList).build());
-                        if (resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() < 5 && resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() >= 1){
-                            result = resultTemp;
-                            break;
-                        }else {
-                            findList.clear();
-                        }
-                    }
+        List<Integer> data = new ArrayList<>();
+        for (int i = 0; i < tempDateValues.size(); i++) {
+            if (i < check) {
+                checkList.addAll(ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(","))));
+            } else {
+                data = ListUtil.getLastTwoCharsAsIntegers(Arrays.asList(tempDateValues.get(i).getValue().split(",")));
+                data.removeAll(checkList);
+                if (!data.isEmpty()) {
+                    break;
                 }
             }
-            check ++;
-        }while (result.getData() == null);
+        }
+        for (int i = 0; i < 10000; i++) {
+            if (data.size() >= check) {
+                for (int j = 0; j < check; j++) {
+                    findList.add(data.get(j));
+                }
+            } else {
+                checkList.addAll(data);
+                findList.addAll(generateUniqueRandomNumbers(req.getQuantity() - data.size(), checkList));
+                findList.addAll(data);
+            }
+            StatisticMultiValuesRes resultTemp = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(findList).build());
+            if (resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() < 5 && resultTemp.getMaxGap() - resultTemp.getStubbornnessLevel() > 0) {
+                result = resultTemp;
+                break;
+            } else {
+                findList.clear();
+            }
+        }
 
 //        StatisticMultiValuesRes result = find(StatisticMultiValuesReq.builder().startDate(20100101L).endDate(DateUtil.getCurrenDate()).values(findList).build());
         return new BaseResponse().success(result);
